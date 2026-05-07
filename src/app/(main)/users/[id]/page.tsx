@@ -1,9 +1,19 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import { ArrowLeftIcon, MailIcon, PhoneIcon, GlobeIcon, BuildingIcon, MapPinIcon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  MailIcon,
+  PhoneIcon,
+  GlobeIcon,
+  BuildingIcon,
+  MapPinIcon,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { User } from "@/types/user"
+import type { Post } from "@/types/post"
+import type { Todo } from "@/types/todo"
+import { UserActivity } from "@/components/user-activity"
 
 async function getUser(id: string): Promise<User | null> {
   const res = await fetch(`https://jsonplaceholder.typicode.com/users/${id}`, {
@@ -12,6 +22,15 @@ async function getUser(id: string): Promise<User | null> {
   if (res.status === 404) return null
   if (!res.ok) throw new Error("Failed to fetch user")
   return res.json()
+}
+
+async function safeFetch<T>(url: string): Promise<T[]> {
+  try {
+    const res = await fetch(url, { next: { revalidate: 60 } })
+    return res.ok ? res.json() : []
+  } catch {
+    return []
+  }
 }
 
 export async function generateMetadata({
@@ -30,16 +49,36 @@ export async function generateMetadata({
 
 export default async function UserDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ back?: string }>
 }) {
-  const { id } = await params
+  const [{ id }, { back }] = await Promise.all([params, searchParams])
+
+  // Validate back param — only allow internal /users paths
+  const backHref =
+    back && /^\/users(\?|$)/.test(decodeURIComponent(back))
+      ? decodeURIComponent(back)
+      : "/users"
 
   let user: User | null
+  let posts: Post[] = []
+  let todos: Todo[] = []
   let fetchError = false
 
   try {
     user = await getUser(id)
+    if (user) {
+      ;[posts, todos] = await Promise.all([
+        safeFetch<Post>(
+          `https://jsonplaceholder.typicode.com/posts?userId=${id}`
+        ),
+        safeFetch<Todo>(
+          `https://jsonplaceholder.typicode.com/todos?userId=${id}`
+        ),
+      ])
+    }
   } catch {
     fetchError = true
     user = null
@@ -47,8 +86,8 @@ export default async function UserDetailPage({
 
   if (fetchError) {
     return (
-      <div className="flex flex-col gap-6 p-4 lg:p-6 max-w-2xl">
-        <BackLink />
+      <div className="flex flex-col gap-6 max-w-2xl">
+        <BackLink href={backHref} />
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Could not load user details. Please try again later.
         </div>
@@ -59,8 +98,8 @@ export default async function UserDetailPage({
   if (!user) notFound()
 
   return (
-    <div className="flex flex-col gap-6 p-4 lg:p-6 max-w-2xl">
-      <BackLink />
+    <div className="flex flex-col gap-6 max-w-2xl">
+      <BackLink href={backHref} />
 
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{user.name}</h1>
@@ -100,7 +139,10 @@ export default async function UserDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
-            <Row icon={<BuildingIcon className="size-3.5" />} label={user.company.name} />
+            <Row
+              icon={<BuildingIcon className="size-3.5" />}
+              label={user.company.name}
+            />
             <p className="text-muted-foreground italic text-xs pl-5">
               &ldquo;{user.company.catchPhrase}&rdquo;
             </p>
@@ -121,14 +163,19 @@ export default async function UserDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <div>
+        <h2 className="text-base font-semibold mb-4">Activity</h2>
+        <UserActivity posts={posts} todos={todos} />
+      </div>
     </div>
   )
 }
 
-function BackLink() {
+function BackLink({ href }: { href: string }) {
   return (
     <Link
-      href="/users"
+      href={href}
       className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground w-fit transition-colors"
     >
       <ArrowLeftIcon className="size-4" />

@@ -20,3 +20,9 @@ export type User = {
   company: Company
   address: Address
 }
+
+export type UserWithStats = User & {
+  totalPosts: number
+  completedTodos: number
+  pendingTodos: number
+}

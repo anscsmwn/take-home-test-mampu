@@ -19,7 +19,9 @@ export default function MainLayout({
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        {children}
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )

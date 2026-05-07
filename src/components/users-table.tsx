@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -12,13 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ArrowUpDownIcon, ArrowUpIcon, ArrowDownIcon } from "lucide-react"
-
-type User = {
-  id: number
-  name: string
-  email: string
-  website: string
-}
+import type { User } from "@/types/user"
 
 type SortDir = "asc" | "desc"
 
@@ -65,7 +60,7 @@ export function UsersTable({ users }: { users: User[] }) {
                   }
                 >
                   Name
-                  {query || sortDir !== "asc" ? (
+                  {sortDir !== "asc" ? (
                     <SortIcon className="size-3.5" />
                   ) : (
                     <ArrowUpDownIcon className="size-3.5 opacity-50" />
@@ -79,14 +74,24 @@ export function UsersTable({ users }: { users: User[] }) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={3}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No users match your search.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/users/${user.id}`}
+                      className="hover:underline underline-offset-4"
+                    >
+                      {user.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <a
@@ -94,6 +99,7 @@ export function UsersTable({ users }: { users: User[] }) {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary underline-offset-4 hover:underline"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {user.website}
                     </a>

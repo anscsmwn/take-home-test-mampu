@@ -1,11 +1,5 @@
+import type { User } from "@/types/user"
 import { UsersTable } from "@/components/users-table"
-
-type User = {
-  id: number
-  name: string
-  email: string
-  website: string
-}
 
 async function getUsers(): Promise<User[]> {
   const res = await fetch("https://jsonplaceholder.typicode.com/users", {
